@@ -1,0 +1,32 @@
+category,manual_page,ui_action,visible_controls,scene_prerequisites,expected_result,verification,risk,implementation_status
+Gestion de projet,Welcome.htm,"Nouveau projet",File/New,Application ouverte,Projet vierge affiché,Capture + titre fenêtre,medium,planned
+Gestion de projet,Welcome.htm,"Ouvrir / enregistrer / enregistrer sous",File/Open/Save/Save As,Chemin connu,Projet chargé ou fichier écrit,Confirmation dialogue + fichier,high,planned
+Gestion de projet,Preference_Panel.htm,Préférences,Edit/Preference,Projet ouvert,Panneau Preferences visible,Capture + valeurs visibles,medium,planned
+Gestion de projet,Welcome.htm,Fichiers récents,Recent Files,Historique disponible,Projet récent sélectionnable,Lecture UIA,low,planned
+Scène et objets,Scene_manager.htm,Scene Manager,Window/Scene Manager,Projet ouvert,Arborescence visible,Capture + noms UIA,medium,planned
+Scène et objets,Scene_manager.htm,Créer/importer objets,Content Manager/Import,Projet ouvert,Objet visible dans scène et arbre,Capture avant/après,high,planned
+Scène et objets,Scene_manager.htm,Transformer/sélectionner,Modify/Transform,Objet sélectionnable,Transformation visible,Capture + lecture valeur,high,planned
+Scène et objets,Scene_manager.htm,Dupliquer/supprimer,Scene Manager context menu,Objet sélectionné,Objet dupliqué ou supprimé,Avant/après + confirmation,high,planned
+Scène et objets,Scene_manager.htm,Attacher/grouper/parenter,Scene Manager context menu,Deux objets visibles,Relation visible dans arbre,UIA + capture,high,planned
+Paths et contraintes,Creating_New_Path.htm,Créer un path,Create/Path,Projet ouvert,Path visible dans viewport,Capture + état scène,high,planned
+Paths et contraintes,Utilizing_Path.htm,Modifier points/Bezier,Path edit controls,Path sélectionné,Forme du path modifiée,Capture avant/après,high,planned
+Paths et contraintes,Utilizing_Path.htm,Attacher prop/avatar/caméra/lumière,Path/Attach,Path et cible présents,Cible attachée,UIA + mouvement visuel,high,planned
+Paths et contraintes,Setting_Position_Keys_on_Path.htm,Clés Path Position (%),Timeline/Path Position,Objet attaché + timeline,Clés visibles et déplacement,Frames comparés,high,planned
+Paths et contraintes,Layering_Path_Transition_Keys_to_Transformation.htm,Transitions/releases,Timeline transition keys,Animation path existante,Transition visible,Capture frames début/fin,high,planned
+Animation d'objets,Launching-Timeline.htm,Timeline/FPS/durée,Timeline controls,Projet ouvert,Timeline configurée,Lecture valeurs UIA,medium,planned
+Animation d'objets,Launching-Timeline.htm,Créer/déplacer/supprimer clés,Timeline tracks,Objet animé,Clé ciblée modifiée,Avant/après + frame,high,planned
+Animation d'objets,Layering_Path_Transition_Keys_to_Transformation.htm,Combiner path et transform,Path + Transform tracks,Path existant,Deux pistes conservées,Comparaison tracks,high,planned
+Personnages et avatars,Welcome.htm,Importer/sélectionner avatar,Content Manager/Scene Manager,Projet ouvert,Avatar visible et sélectionné,Capture + nom,medium,planned
+Personnages et avatars,Welcome.htm,Appliquer motion/pose,Content Manager/Modify,Avatar compatible,Mouvement visible,Preview + capture frames,high,planned
+Personnages et avatars,Welcome.htm,Motion Director,HUB/Motion Director,Avatar compatible,Performance visible,Playback capture,high,planned
+Animation faciale et parole,Welcome.htm,Expressions/visèmes/AccuLips,Facial/AccuLips,Avatar avec visage,Expression/lip sync visible,Preview + capture,high,planned
+Caméras,Welcome.htm,Créer/sélectionner caméra,Create Camera/Scene Manager,Projet ouvert,Caméra réelle active,Capture cadrage + arbre,high,planned
+Caméras,Welcome.htm,Positionner/look-at/focale,Modify/Camera,Camera sélectionnée,Cadrage attendu visible,Capture avant/après,medium,planned
+Caméras,Welcome.htm,Suivi/plans multiples,Camera/Timeline,Objets et timeline,Caméra suit sujet,Playback captures,high,planned
+Matériaux et textures,Welcome.htm,Couleur/textures/UV/relief,Modify/Material,Objet sélectionné,Aspect visuel modifié,Capture viewport,high,planned
+Lumières et environnement,Welcome.htm,Créer/régler lumière,Create Light/Modify,Projet ouvert,Éclairage preview modifié,Capture avant/après,high,planned
+Physique et effets,Welcome.htm,Rigid body/collisions/particules,Modify/Physics/Particle,Objets compatibles,Effet visible,Playback capture,high,planned
+Rendu et caméra finale,Welcome.htm,Réglages résolution/FPS/format,Render settings,Projet sauvegardé,Paramètres visibles,Lecture UIA + capture,medium,planned
+Rendu et caméra finale,Welcome.htm,Lancer/arrêter rendu,Render,Output choisi,Processus et fichier produits,Confirmation + fichier,high,planned
+Interface et workflow,Launching-Timeline.htm,Ouvrir panneaux/onglets,Window menu,Application ouverte,Panneau visible,Capture + focus,medium,implemented-read-only
+Interface et workflow,Preference_Panel.htm,Messages modaux/erreurs,Dialog controls,Application ouverte,Dialog reconnu et workflow stoppé,UIA + logs,high,planned
