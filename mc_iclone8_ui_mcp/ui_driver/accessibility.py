@@ -98,3 +98,46 @@ class WindowsAccessibilityReader:
             except Exception:
                 continue
         return {"backend": "uia", "control": match, "children": children, "read_only": True}
+
+    def read_automation_control(self, automation_id: str, max_elements: int = 80) -> dict[str, Any]:
+        windows = self.driver.enumerate_windows()
+        if not windows:
+            raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
+        from pywinauto import Desktop
+        root = Desktop(backend="uia").window(handle=windows[0].handle)
+
+        def find_id(parent: Any, wanted: str, depth: int = 4) -> Any | None:
+            if depth <= 0:
+                return None
+            for child in parent.children()[:max_elements]:
+                if child.element_info.automation_id == wanted:
+                    return child
+                found = find_id(child, wanted, depth - 1)
+                if found is not None:
+                    return found
+            return None
+
+        control = find_id(root, automation_id)
+        if control is None:
+            raise AccessibilityUnavailable(f"Contrôle UIA introuvable: {automation_id}")
+        info = control.element_info
+        children: list[dict[str, Any]] = []
+        for child in control.children()[:max_elements]:
+            try:
+                child_info = child.element_info
+                children.append({
+                    "control_type": child_info.control_type,
+                    "name": child_info.name,
+                    "automation_id": child_info.automation_id,
+                    "class_name": child_info.class_name,
+                    "enabled": bool(child_info.enabled),
+                    "visible": bool(child_info.visible),
+                })
+            except Exception:
+                continue
+        return {
+            "backend": "uia",
+            "control": {"control_type": info.control_type, "name": info.name, "automation_id": info.automation_id, "class_name": info.class_name, "enabled": bool(info.enabled), "visible": bool(info.visible)},
+            "children": children,
+            "read_only": True,
+        }

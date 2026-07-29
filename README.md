@@ -14,13 +14,61 @@ Serveur MCP local pour piloter **l'interface visible d'iClone 8** comme un utili
 
 ## Installation
 
+### Prérequis
+
+- Windows avec une session utilisateur interactive.
+- iClone 8 installé et ouvert pour les tests UI.
+- Python 3.10 ou plus récent.
+- Le serveur doit rester local : il ne se connecte pas à Internet pendant son exécution.
+
+### Installation depuis GitHub
+
 ```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e .[dev]
+git clone https://github.com/gorbabor/mc-iclone8-ui-mcp.git
+cd mc-iclone8-ui-mcp
 ```
 
-Les dépendances UI sont optionnelles. Le socle Win32 fonctionne avec la bibliothèque standard ; `Pillow` améliore les captures d'écran.
+Si `python` pointe vers un environnement sans `pip`, utiliser le Python système (`py -3`) ou le chemin Python fourni par Codex :
+
+```powershell
+$py = "C:\Users\Christian Bwanakawa\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+& $py -m pip install -e ".[windows-ui,screenshots]"
+```
+
+La configuration setuptools inclut uniquement le paquet `mc_iclone8_ui_mcp`; les dossiers `skill/`, `docs/` et `screenshots/` ne sont pas installés comme paquets Python.
+
+### Vérification
+
+```powershell
+& $py tests\smoke_test.py
+& $py -m compileall -q mc_iclone8_ui_mcp
+```
+
+Résultat attendu : `smoke test: ok`.
+
+### Configuration MCP stdio
+
+Le serveur est lancé par le client MCP, pas comme un serveur HTTP :
+
+```json
+{
+  "mcpServers": {
+    "mc-iclone8-ui-mcp": {
+      "command": "C:\\Users\\Christian Bwanakawa\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "args": ["-m", "mc_iclone8_ui_mcp"],
+      "cwd": "C:\\chemin\\vers\\mc-iclone8-ui-mcp"
+    }
+  }
+}
+```
+
+Le processus MCP utilise stdin/stdout pour JSON-RPC et stderr pour les journaux. Ne pas utiliser le panneau HTTP d'un autre plugin iClone comme remplacement de ce serveur.
+
+### Lancement manuel
+
+```powershell
+& $py -m mc_iclone8_ui_mcp
+```
 
 ## Lancement
 
@@ -35,6 +83,7 @@ Le processus utilise JSON-RPC sur stdin/stdout. Les logs vont sur stderr.
 - `ui.inspect_application` : détecte les fenêtres iClone 8 visibles et rapporte le focus.
 - `ui.inspect_accessibility_tree` : lit les contrôles directs Windows UI Automation en lecture seule si `.[windows-ui]` est installé.
 - `ui.inspect_named_control` : inspecte un contrôle nommé, par exemple `Scene`, et ses enfants directs.
+- `ui.inspect_automation_control` : inspecte un contrôle par `automation_id`, par exemple le conteneur du Scene Manager.
 - `ui.capture_screen` : capture l'écran ou la fenêtre iClone 8.
 - `scene.read_visible_state` : lit l'état visible connu sans modifier la scène.
 - `workflow.stop_all` : arrête le workflow local courant.
