@@ -9,7 +9,7 @@ def test_initialize_and_tools_list():
     assert initialized["result"]["serverInfo"]["name"] == "mc-iclone8-ui-mcp"
     listed = server.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     assert {tool["name"] for tool in listed["result"]["tools"]} == {
-        "ui.inspect_application", "ui.inspect_accessibility_tree", "ui.capture_screen", "scene.read_visible_state", "workflow.stop_all"
+        "ui.inspect_application", "ui.inspect_accessibility_tree", "ui.inspect_named_control", "ui.capture_screen", "scene.read_visible_state", "workflow.stop_all"
     }
 
 

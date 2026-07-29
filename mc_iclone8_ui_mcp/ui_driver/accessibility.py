@@ -52,3 +52,49 @@ class WindowsAccessibilityReader:
             "elements": elements,
             "read_only": True,
         }
+
+    def read_named_control(self, name: str, max_elements: int = 80) -> dict[str, Any]:
+        """Read one named direct child and its immediate children, without actions."""
+        tree = self.read_tree(max_elements=max_elements)
+        windows = self.driver.enumerate_windows()
+        from pywinauto import Desktop
+        root = Desktop(backend="uia").window(handle=windows[0].handle)
+
+        def find_named(parent: Any, wanted: str, depth: int = 3) -> Any | None:
+            if depth <= 0:
+                return None
+            for child in parent.children()[:max_elements]:
+                if child.element_info.name == wanted:
+                    return child
+                found = find_named(child, wanted, depth - 1)
+                if found is not None:
+                    return found
+            return None
+
+        control = find_named(root, name)
+        if control is None:
+            raise AccessibilityUnavailable(f"Contrôle UIA introuvable: {name}")
+        info = control.element_info
+        match = {
+            "control_type": info.control_type,
+            "name": info.name,
+            "automation_id": info.automation_id,
+            "class_name": info.class_name,
+            "enabled": bool(info.enabled),
+            "visible": bool(info.visible),
+        }
+        children: list[dict[str, Any]] = []
+        for child in control.children()[:max_elements]:
+            try:
+                info = child.element_info
+                children.append({
+                    "control_type": info.control_type,
+                    "name": info.name,
+                    "automation_id": info.automation_id,
+                    "class_name": info.class_name,
+                    "enabled": bool(info.enabled),
+                    "visible": bool(info.visible),
+                })
+            except Exception:
+                continue
+        return {"backend": "uia", "control": match, "children": children, "read_only": True}

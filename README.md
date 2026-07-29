@@ -34,6 +34,7 @@ Le processus utilise JSON-RPC sur stdin/stdout. Les logs vont sur stderr.
 
 - `ui.inspect_application` : détecte les fenêtres iClone 8 visibles et rapporte le focus.
 - `ui.inspect_accessibility_tree` : lit les contrôles directs Windows UI Automation en lecture seule si `.[windows-ui]` est installé.
+- `ui.inspect_named_control` : inspecte un contrôle nommé, par exemple `Scene`, et ses enfants directs.
 - `ui.capture_screen` : capture l'écran ou la fenêtre iClone 8.
 - `scene.read_visible_state` : lit l'état visible connu sans modifier la scène.
 - `workflow.stop_all` : arrête le workflow local courant.
