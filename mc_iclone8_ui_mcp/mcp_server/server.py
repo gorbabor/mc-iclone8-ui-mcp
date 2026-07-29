@@ -25,7 +25,7 @@ class MCPServer:
     def tools(self) -> list[dict[str, Any]]:
         return [
             {"name": "ui.inspect_application", "description": "Inspecte les fenêtres visibles iClone 8 en lecture seule.", "inputSchema": {"type": "object", "properties": {}}},
-            {"name": "ui.inspect_accessibility_tree", "description": "Lit l'arbre Windows UI Automation sans effectuer d'action.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 250}}}},
+            {"name": "ui.inspect_accessibility_tree", "description": "Lit les contrôles directs Windows UI Automation sans effectuer d'action.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}}},
             {"name": "ui.capture_screen", "description": "Capture l'écran ou la fenêtre iClone 8 sans modifier la scène.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "window_only": {"type": "boolean", "default": True}}, "required": ["path"]}},
             {"name": "scene.read_visible_state", "description": "Lit l'état visible connu de l'interface iClone 8.", "inputSchema": {"type": "object", "properties": {}}},
             {"name": "workflow.stop_all", "description": "Demande l'arrêt propre du workflow UI courant.", "inputSchema": {"type": "object", "properties": {}}},

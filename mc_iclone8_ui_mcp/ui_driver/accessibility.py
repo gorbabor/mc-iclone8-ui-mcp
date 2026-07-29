@@ -15,7 +15,7 @@ class WindowsAccessibilityReader:
     def __init__(self, driver: WindowsUIDriver) -> None:
         self.driver = driver
 
-    def read_tree(self, max_elements: int = 250) -> dict[str, Any]:
+    def read_tree(self, max_elements: int = 80) -> dict[str, Any]:
         try:
             from pywinauto import Desktop
         except ImportError as exc:
@@ -29,7 +29,9 @@ class WindowsAccessibilityReader:
 
         root = Desktop(backend="uia").window(handle=windows[0].handle)
         elements: list[dict[str, Any]] = []
-        for control in root.descendants()[:max_elements]:
+        # iClone exposes a large/custom-drawn UI tree. A recursive descendants()
+        # walk can block for a long time, so the safe first pass is shallow.
+        for control in root.children()[:max_elements]:
             try:
                 info = control.element_info
                 elements.append({
@@ -44,6 +46,7 @@ class WindowsAccessibilityReader:
                 continue
         return {
             "backend": "uia",
+            "depth": 1,
             "window": windows[0].title,
             "element_count": len(elements),
             "elements": elements,
