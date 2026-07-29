@@ -64,6 +64,8 @@ Le serveur est lancé par le client MCP, pas comme un serveur HTTP :
 
 Le processus MCP utilise stdin/stdout pour JSON-RPC et stderr pour les journaux. Ne pas utiliser le panneau HTTP d'un autre plugin iClone comme remplacement de ce serveur.
 
+Note UI Automation : iClone 8 peut exposer des identifiants Qt historiques contenant `iClone6 MainWindow`. Ce sont des métadonnées d'accessibilité de l'interface observée, pas des appels à iClone 6. Le code matche uniquement les suffixes sémantiques et n'utilise ni RLPy ni API d'une autre version.
+
 ### Lancement manuel
 
 ```powershell

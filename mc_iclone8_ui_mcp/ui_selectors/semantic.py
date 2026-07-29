@@ -14,7 +14,7 @@ class SemanticSelector:
 SELECTORS = {
     "scene_manager": SemanticSelector(
         "scene_manager", ("Scene", "Scène"),
-        ("iClone6 MainWindow.:/plugin/ICListManager/ICListManager.ui.ListManager",),
+        (":/plugin/ICListManager/ICListManager.ui.ListManager",),
         ("Window", "Group"),
     ),
     "modify": SemanticSelector("modify", ("Modify", "Modifier"), control_types=("Window", "Group")),

@@ -8,7 +8,9 @@ from ..ui_driver.windows import WindowsUIDriver
 from .base import Workflow, WorkflowContext
 
 
-SCENE_MANAGER_ID = "iClone6 MainWindow.:/plugin/ICListManager/ICListManager.ui.ListManager"
+# iClone 8 currently exposes a legacy Qt automation prefix before this stable
+# suffix. We intentionally match only the semantic suffix, never an iClone 6 API.
+SCENE_MANAGER_ID = ":/plugin/ICListManager/ICListManager.ui.ListManager"
 
 
 class SceneManagerReadWorkflow(Workflow):

@@ -110,7 +110,8 @@ class WindowsAccessibilityReader:
             if depth <= 0:
                 return None
             for child in parent.children()[:max_elements]:
-                if child.element_info.automation_id == wanted:
+                actual_id = child.element_info.automation_id
+                if actual_id == wanted or (wanted.startswith(":/") and actual_id.endswith(wanted)):
                     return child
                 found = find_id(child, wanted, depth - 1)
                 if found is not None:
@@ -154,7 +155,8 @@ class WindowsAccessibilityReader:
             if depth < 0:
                 return None
             for child in parent.children()[:max_elements]:
-                if child.element_info.automation_id == wanted:
+                actual_id = child.element_info.automation_id
+                if actual_id == wanted or (wanted.startswith(":/") and actual_id.endswith(wanted)):
                     return child
                 found = find_id(child, wanted, depth - 1)
                 if found is not None:
