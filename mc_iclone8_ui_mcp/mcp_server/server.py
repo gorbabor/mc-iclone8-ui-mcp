@@ -115,21 +115,29 @@ class MCPServer:
                 if not can_interact:
                     result = ToolResult("blocked", "scene.select_item", target, observed_state_before=before, warnings=[reason], next_step="Restaurer iClone 8 et le placer au premier plan, puis relancer.")
                 else:
+                    screenshots: list[str] = []
                     try:
-                        screenshots: list[str] = []
+                        target_window = self.driver.target_window()
+                        if target_window is None:
+                            raise RuntimeError("Instance cible disparue avant l’action")
+                        target_handle = target_window.handle
                         screenshot_dir = args.get("screenshot_dir")
                         safe_target = re.sub(r"[^A-Za-z0-9_.-]+", "_", target).strip("_") or "item"
                         if screenshot_dir:
                             before_path = Path(str(screenshot_dir)) / f"select_{safe_target}_before.png"
                             screenshots.append(self.driver.capture_screen(before_path, window_only=True))
                         state = self.accessibility_reader.select_tree_item(target, max_depth=int(args.get("max_depth", 6)))
+                        # Some Qt controls yield focus to the desktop after input.
+                        # Restore the same target before collecting after-state evidence.
+                        focus_state = self.driver.activate(target_handle)
                         if screenshot_dir:
                             after_path = Path(str(screenshot_dir)) / f"select_{safe_target}_after.png"
                             screenshots.append(self.driver.capture_screen(after_path, window_only=True))
                         verified = state["selected_after"] is True
-                        result = ToolResult("ok" if verified else "blocked", "scene.select_item", target, screenshots=screenshots, observed_state_before=before, observed_state_after=state, verification={"visual_verification": bool(screenshots), "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select", "selection_confirmed": verified, "visual_review_required": not verified}, warnings=[] if verified else ["Le contrôle Qt n’expose pas l’état SelectionItem; preuve visuelle requise."], next_step="Examiner la capture après et lire le panneau Modify pour confirmer l'objet sélectionné.")
+                        state["focus_reacquired"] = focus_state["focus_acquired"]
+                        result = ToolResult("ok" if verified else "blocked", "scene.select_item", target, screenshots=screenshots, observed_state_before=before, observed_state_after=state, verification={"visual_verification": bool(screenshots), "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select", "selection_confirmed": verified, "focus_reacquired": focus_state["focus_acquired"], "visual_review_required": not verified}, warnings=[] if verified else ["Le contrôle Qt n’expose pas l’état SelectionItem; preuve visuelle requise."], next_step="Examiner la capture après et lire le panneau Modify pour confirmer l'objet sélectionné.")
                     except (AccessibilityUnavailable, RuntimeError, ValueError) as exc:
-                        result = ToolResult("blocked", "scene.select_item", target, observed_state_before=before, warnings=[str(exc)], next_step="Vérifier que le TreeItem est visible et que UI Automation est disponible.")
+                        result = ToolResult("blocked", "scene.select_item", target, screenshots=screenshots, observed_state_before=before, warnings=[str(exc)], next_step="Vérifier que le TreeItem est visible et que UI Automation est disponible.")
         elif name == "workflow.catalog":
             catalog = {key: {"category": workflow.category, "status": "planned"} for key, workflow in self.planned.items()}
             result = ToolResult("ok", "workflow.catalog", "eight workflow families", observed_state_before=before, observed_state_after=catalog, verification={"read_only": True}, next_step="Activer chaque workflow après validation sur une scène de test iClone 8.")
