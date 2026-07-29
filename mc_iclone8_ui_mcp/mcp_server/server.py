@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 import time
 from pathlib import Path
@@ -40,7 +41,7 @@ class MCPServer:
             {"name": "ui.inspect_automation_control", "description": "Inspecte un contrôle UIA par automation_id et ses enfants directs, sans action.", "inputSchema": {"type": "object", "properties": {"automation_id": {"type": "string"}, "max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}, "required": ["automation_id"]}},
             {"name": "scene.read_manager", "description": "Lit un sous-arbre borné du Scene Manager en lecture seule.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 500, "default": 200}, "max_depth": {"type": "integer", "minimum": 1, "maximum": 6, "default": 4}}}},
             {"name": "scene.list_items", "description": "Extrait les TreeItem visibles du Scene Manager en lecture seule.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 500, "default": 200}, "max_depth": {"type": "integer", "minimum": 1, "maximum": 6, "default": 6}}}},
-            {"name": "scene.select_item", "description": "Sélectionne un TreeItem par son nom accessible après confirmation et vérification du focus.", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "confirm": {"type": "boolean"}, "max_depth": {"type": "integer", "minimum": 1, "maximum": 6, "default": 6}}, "required": ["name", "confirm"]}},
+            {"name": "scene.select_item", "description": "Sélectionne un TreeItem par son nom accessible après confirmation et vérification du focus.", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "confirm": {"type": "boolean"}, "max_depth": {"type": "integer", "minimum": 1, "maximum": 6, "default": 6}, "screenshot_dir": {"type": "string"}}, "required": ["name", "confirm"]}},
             {"name": "workflow.catalog", "description": "Retourne l'état des huit familles de workflows, sans action UI.", "inputSchema": {"type": "object", "properties": {}}},
             {"name": "ui.capture_screen", "description": "Capture l'écran ou la fenêtre iClone 8 sans modifier la scène.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "window_only": {"type": "boolean", "default": True}}, "required": ["path"]}},
             {"name": "scene.read_visible_state", "description": "Lit l'état visible connu de l'interface iClone 8.", "inputSchema": {"type": "object", "properties": {}}},
@@ -115,9 +116,18 @@ class MCPServer:
                     result = ToolResult("blocked", "scene.select_item", target, observed_state_before=before, warnings=[reason], next_step="Restaurer iClone 8 et le placer au premier plan, puis relancer.")
                 else:
                     try:
+                        screenshots: list[str] = []
+                        screenshot_dir = args.get("screenshot_dir")
+                        safe_target = re.sub(r"[^A-Za-z0-9_.-]+", "_", target).strip("_") or "item"
+                        if screenshot_dir:
+                            before_path = Path(str(screenshot_dir)) / f"select_{safe_target}_before.png"
+                            screenshots.append(self.driver.capture_screen(before_path, window_only=True))
                         state = self.accessibility_reader.select_tree_item(target, max_depth=int(args.get("max_depth", 6)))
+                        if screenshot_dir:
+                            after_path = Path(str(screenshot_dir)) / f"select_{safe_target}_after.png"
+                            screenshots.append(self.driver.capture_screen(after_path, window_only=True))
                         verified = state["selected_after"] is True
-                        result = ToolResult("ok" if verified else "blocked", "scene.select_item", target, observed_state_before=before, observed_state_after=state, verification={"visual_verification": False, "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select", "selection_confirmed": verified}, warnings=[] if verified else ["Le contrôle Qt n’expose pas l’état SelectionItem; preuve visuelle requise."], next_step="Capturer l'écran et lire le panneau Modify pour confirmer l'objet sélectionné.")
+                        result = ToolResult("ok" if verified else "blocked", "scene.select_item", target, screenshots=screenshots, observed_state_before=before, observed_state_after=state, verification={"visual_verification": bool(screenshots), "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select", "selection_confirmed": verified, "visual_review_required": not verified}, warnings=[] if verified else ["Le contrôle Qt n’expose pas l’état SelectionItem; preuve visuelle requise."], next_step="Examiner la capture après et lire le panneau Modify pour confirmer l'objet sélectionné.")
                     except (AccessibilityUnavailable, RuntimeError, ValueError) as exc:
                         result = ToolResult("blocked", "scene.select_item", target, observed_state_before=before, warnings=[str(exc)], next_step="Vérifier que le TreeItem est visible et que UI Automation est disponible.")
         elif name == "workflow.catalog":

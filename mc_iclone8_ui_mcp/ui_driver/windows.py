@@ -105,16 +105,23 @@ class WindowsUIDriver:
 
     def capture_screen(self, output: Path, window_only: bool = False) -> str:
         output.parent.mkdir(parents=True, exist_ok=True)
+        if window_only:
+            window = self.target_window()
+            if window is None:
+                raise RuntimeError("Fenêtre iClone 8 non détectée")
+            if not window.foreground:
+                raise RuntimeError("Capture refusée: iClone 8 n’est pas au premier plan")
+            try:
+                from pywinauto import Desktop
+                Desktop(backend="uia").window(handle=window.handle).capture_as_image().save(output)
+                return str(output)
+            except Exception as exc:
+                log.warning("Capture UIA indisponible, repli sur ImageGrab: %s", exc)
         try:
             from PIL import ImageGrab
         except ImportError as exc:
             raise RuntimeError("Pillow est requis pour les captures: pip install -e .[screenshots]") from exc
         bbox = None
-        if window_only:
-            window = self.target_window()
-            if window is None:
-                raise RuntimeError("Fenêtre iClone 8 non détectée")
-            bbox = window.rect
         ImageGrab.grab(bbox=bbox).save(output)
         return str(output)
 
