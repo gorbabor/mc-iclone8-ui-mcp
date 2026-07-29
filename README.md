@@ -108,6 +108,7 @@ Le processus utilise JSON-RPC sur stdin/stdout. Les logs vont sur stderr.
 - `scene.read_manager` : lit un sous-arbre borné du Scene Manager, sans modification.
 - `scene.list_items` : extrait les noms des objets `TreeItem` visibles, sans sélection.
 - `scene.select_item` : sélectionne un objet par nom accessible, uniquement avec `confirm=true` et iClone 8 au premier plan. `screenshot_dir` peut produire les captures avant/après.
+- `scene.read_modify` : lit le sous-arbre du panneau Modify pour vérifier l’état après une action.
 - `workflow.catalog` : expose l’état progressif des huit familles de workflows.
 - `ui.capture_screen` : capture l'écran ou la fenêtre iClone 8.
 - `scene.read_visible_state` : lit l'état visible connu sans modifier la scène.
