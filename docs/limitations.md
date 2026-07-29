@@ -8,3 +8,4 @@
 - Aucune action de clic, saisie, raccourci, menu ou RLPy n'est implémentée dans ce lot.
 - La couverture de la matrice est une cartographie de planification, pas une preuve de support.
 - Certains `automation_id` exposés par l'interface iClone 8 contiennent encore un préfixe Qt historique tel que `iClone6 MainWindow`. Le serveur ne l'utilise pas comme API : il ignore ce préfixe et ne matche que les suffixes UI sémantiques. Aucune fonction RLPy, API iClone 6 ou référence de manuel iClone 6 n'est utilisée.
+- La bascule de fenêtre utilise le handle Win32 et nécessite une session Windows interactive. Windows peut refuser le focus si une autre application est en saisie; le serveur retourne alors `blocked` au lieu de cliquer à l'aveugle.

@@ -64,6 +64,21 @@ Le serveur est lancé par le client MCP, pas comme un serveur HTTP :
 
 Le processus MCP utilise stdin/stdout pour JSON-RPC et stderr pour les journaux. Ne pas utiliser le panneau HTTP d'un autre plugin iClone comme remplacement de ce serveur.
 
+### Gestion des instances iClone
+
+Pour une session interactive, le client peut suivre cette séquence :
+
+```text
+ui.list_instances
+→ ui.activate_instance(handle)
+→ ui.get_active_instance
+→ ui.set_interaction_mode("interact" ou "session")
+→ action UI
+→ vérification avant/après
+```
+
+Le mode `observe` ne prend pas le focus. Le mode `interact` autorise les primitives UI après vérification du focus. Le mode `session` indique qu’une instance doit rester la cible pendant la séquence, tout en vérifiant le focus avant chaque action.
+
 Note UI Automation : iClone 8 peut exposer des identifiants Qt historiques contenant `iClone6 MainWindow`. Ce sont des métadonnées d'accessibilité de l'interface observée, pas des appels à iClone 6. Le code matche uniquement les suffixes sémantiques et n'utilise ni RLPy ni API d'une autre version.
 
 ### Lancement manuel
@@ -83,6 +98,10 @@ Le processus utilise JSON-RPC sur stdin/stdout. Les logs vont sur stderr.
 ## Outils MCP read-only
 
 - `ui.inspect_application` : détecte les fenêtres iClone 8 visibles et rapporte le focus.
+- `ui.list_instances` : liste les fenêtres iClone 8 avec handle, PID, projet et focus.
+- `ui.get_active_instance` : lit l’instance cible et l’état du focus.
+- `ui.activate_instance` : restaure et place une instance cible au premier plan.
+- `ui.set_interaction_mode` : configure `observe`, `interact` ou `session`.
 - `ui.inspect_accessibility_tree` : lit les contrôles directs Windows UI Automation en lecture seule si `.[windows-ui]` est installé.
 - `ui.inspect_named_control` : inspecte un contrôle nommé, par exemple `Scene`, et ses enfants directs.
 - `ui.inspect_automation_control` : inspecte un contrôle par `automation_id`, par exemple le conteneur du Scene Manager.

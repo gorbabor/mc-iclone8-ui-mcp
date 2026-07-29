@@ -26,10 +26,15 @@ class MCPServer:
         self.scene_workflow = SceneManagerReadWorkflow(WorkflowContext(self.driver))
         self.planned = planned_workflows(self.driver)
         self.started_at = time.time()
+        self.interaction_mode = "observe"
 
     def tools(self) -> list[dict[str, Any]]:
         return [
             {"name": "ui.inspect_application", "description": "Inspecte les fenêtres visibles iClone 8 en lecture seule.", "inputSchema": {"type": "object", "properties": {}}},
+            {"name": "ui.list_instances", "description": "Liste les instances iClone 8 détectées avec handle, PID, projet et focus.", "inputSchema": {"type": "object", "properties": {}}},
+            {"name": "ui.get_active_instance", "description": "Retourne l’instance iClone 8 ciblée et l’état du focus.", "inputSchema": {"type": "object", "properties": {}}},
+            {"name": "ui.activate_instance", "description": "Restaure et place une instance iClone 8 au premier plan.", "inputSchema": {"type": "object", "properties": {"handle": {"type": "integer"}}, "required": ["handle"]}},
+            {"name": "ui.set_interaction_mode", "description": "Configure observe, interact ou session.", "inputSchema": {"type": "object", "properties": {"mode": {"type": "string", "enum": ["observe", "interact", "session"]}}, "required": ["mode"]}},
             {"name": "ui.inspect_accessibility_tree", "description": "Lit les contrôles directs Windows UI Automation sans effectuer d'action.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}}},
             {"name": "ui.inspect_named_control", "description": "Inspecte un contrôle UIA nommé et ses enfants directs, sans action.", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}, "required": ["name"]}},
             {"name": "ui.inspect_automation_control", "description": "Inspecte un contrôle UIA par automation_id et ses enfants directs, sans action.", "inputSchema": {"type": "object", "properties": {"automation_id": {"type": "string"}, "max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}, "required": ["automation_id"]}},
@@ -48,6 +53,28 @@ class MCPServer:
             after = self.driver.inspect()
             detected = bool(after.get("windows"))
             result = ToolResult("ok" if detected else "blocked", "inspect_application", "iClone 8", observed_state_before=before, observed_state_after=after, verification={"visual_verification": False, "window_detected": detected, "reason": "inspection only"}, warnings=[] if detected else ["Fenêtre iClone 8 non détectée"], next_step="Si une fenêtre iClone 8 est détectée, lancer uniquement un workflow explicitement confirmé.")
+        elif name == "ui.list_instances":
+            instances = [window.__dict__ for window in self.driver.enumerate_windows()]
+            result = ToolResult("ok" if instances else "blocked", "list_instances", "iClone 8 instances", observed_state_before=before, observed_state_after={"instances": instances, "count": len(instances)}, verification={"read_only": True, "instance_count": len(instances)}, warnings=[] if instances else ["Aucune instance iClone 8 détectée"], next_step="Choisir un handle puis appeler ui.activate_instance.")
+        elif name == "ui.get_active_instance":
+            target = self.driver.target_window()
+            focused = next((window for window in self.driver.enumerate_windows() if window.foreground), None)
+            state = {"target": target.__dict__ if target else None, "focused": focused.__dict__ if focused else None, "mode": self.interaction_mode}
+            result = ToolResult("ok" if target else "blocked", "get_active_instance", "iClone 8 active instance", observed_state_before=before, observed_state_after=state, verification={"read_only": True, "focus_matches_target": bool(target and focused and target.handle == focused.handle)}, warnings=[] if target else ["Aucune instance iClone 8 détectée"], next_step="Appeler ui.activate_instance si la cible n’est pas au premier plan.")
+        elif name == "ui.activate_instance":
+            try:
+                state = self.driver.activate(int(args["handle"]))
+                self.interaction_mode = "interact"
+                result = ToolResult("ok" if state["focus_acquired"] else "blocked", "activate_instance", str(args["handle"]), observed_state_before=before, observed_state_after=state, verification={"focus_acquired": state["focus_acquired"], "restored": state["restored"]}, warnings=[] if state["focus_acquired"] else ["Windows n’a pas accordé le focus"], next_step="Vérifier get_active_instance avant une action UI.")
+            except (RuntimeError, KeyError) as exc:
+                result = ToolResult("blocked", "activate_instance", str(args.get("handle", "")), observed_state_before=before, warnings=[str(exc)], next_step="Relire ui.list_instances et vérifier le handle.")
+        elif name == "ui.set_interaction_mode":
+            mode = str(args.get("mode", ""))
+            if mode not in {"observe", "interact", "session"}:
+                result = ToolResult("blocked", "set_interaction_mode", mode, observed_state_before=before, warnings=["Mode invalide"], next_step="Utiliser observe, interact ou session.")
+            else:
+                self.interaction_mode = mode
+                result = ToolResult("ok", "set_interaction_mode", mode, observed_state_before=before, observed_state_after={"mode": mode}, verification={"local_state_updated": True}, next_step="Les actions UI doivent encore vérifier le focus cible.")
         elif name == "ui.inspect_accessibility_tree":
             try:
                 tree = self.accessibility_reader.read_tree(int(args.get("max_elements", 250)))
@@ -89,8 +116,9 @@ class MCPServer:
                 else:
                     try:
                         state = self.accessibility_reader.select_tree_item(target, max_depth=int(args.get("max_depth", 6)))
-                        result = ToolResult("ok", "scene.select_item", target, observed_state_before=before, observed_state_after=state, verification={"visual_verification": False, "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select"}, next_step="Capturer l'écran et lire le panneau Modify pour confirmer l'objet sélectionné.")
-                    except AccessibilityUnavailable as exc:
+                        verified = state["selected_after"] is True
+                        result = ToolResult("ok" if verified else "blocked", "scene.select_item", target, observed_state_before=before, observed_state_after=state, verification={"visual_verification": False, "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select", "selection_confirmed": verified}, warnings=[] if verified else ["Le contrôle Qt n’expose pas l’état SelectionItem; preuve visuelle requise."], next_step="Capturer l'écran et lire le panneau Modify pour confirmer l'objet sélectionné.")
+                    except (AccessibilityUnavailable, RuntimeError, ValueError) as exc:
                         result = ToolResult("blocked", "scene.select_item", target, observed_state_before=before, warnings=[str(exc)], next_step="Vérifier que le TreeItem est visible et que UI Automation est disponible.")
         elif name == "workflow.catalog":
             catalog = {key: {"category": workflow.category, "status": "planned"} for key, workflow in self.planned.items()}

@@ -23,11 +23,11 @@ class WindowsAccessibilityReader:
                 "Le backend UI Automation nécessite pywinauto: pip install -e .[windows-ui]"
             ) from exc
 
-        windows = self.driver.enumerate_windows()
-        if not windows:
+        window = self.driver.target_window()
+        if window is None:
             raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
 
-        root = Desktop(backend="uia").window(handle=windows[0].handle)
+        root = Desktop(backend="uia").window(handle=window.handle)
         elements: list[dict[str, Any]] = []
         # iClone exposes a large/custom-drawn UI tree. A recursive descendants()
         # walk can block for a long time, so the safe first pass is shallow.
@@ -47,7 +47,7 @@ class WindowsAccessibilityReader:
         return {
             "backend": "uia",
             "depth": 1,
-            "window": windows[0].title,
+            "window": window.title,
             "element_count": len(elements),
             "elements": elements,
             "read_only": True,
@@ -56,9 +56,11 @@ class WindowsAccessibilityReader:
     def read_named_control(self, name: str, max_elements: int = 80) -> dict[str, Any]:
         """Read one named direct child and its immediate children, without actions."""
         tree = self.read_tree(max_elements=max_elements)
-        windows = self.driver.enumerate_windows()
+        window = self.driver.target_window()
         from pywinauto import Desktop
-        root = Desktop(backend="uia").window(handle=windows[0].handle)
+        if window is None:
+            raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
+        root = Desktop(backend="uia").window(handle=window.handle)
 
         def find_named(parent: Any, wanted: str, depth: int = 3) -> Any | None:
             if depth <= 0:
@@ -100,11 +102,11 @@ class WindowsAccessibilityReader:
         return {"backend": "uia", "control": match, "children": children, "read_only": True}
 
     def read_automation_control(self, automation_id: str, max_elements: int = 80) -> dict[str, Any]:
-        windows = self.driver.enumerate_windows()
-        if not windows:
+        window = self.driver.target_window()
+        if window is None:
             raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
         from pywinauto import Desktop
-        root = Desktop(backend="uia").window(handle=windows[0].handle)
+        root = Desktop(backend="uia").window(handle=window.handle)
 
         def find_id(parent: Any, wanted: str, depth: int = 4) -> Any | None:
             if depth <= 0:
@@ -145,11 +147,11 @@ class WindowsAccessibilityReader:
 
     def read_bounded_descendants(self, automation_id: str, max_elements: int = 200, max_depth: int = 4) -> dict[str, Any]:
         """Read a bounded UIA subtree using children(), avoiding unbounded descendants()."""
-        windows = self.driver.enumerate_windows()
-        if not windows:
+        window = self.driver.target_window()
+        if window is None:
             raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
         from pywinauto import Desktop
-        root = Desktop(backend="uia").window(handle=windows[0].handle)
+        root = Desktop(backend="uia").window(handle=window.handle)
 
         def find_id(parent: Any, wanted: str, depth: int) -> Any | None:
             if depth < 0:
@@ -179,11 +181,29 @@ class WindowsAccessibilityReader:
 
     def select_tree_item(self, name: str, max_elements: int = 250, max_depth: int = 6) -> dict[str, Any]:
         """Select a visible TreeItem by accessible name; caller must enforce confirmation/focus."""
-        windows = self.driver.enumerate_windows()
-        if not windows:
+        window = self.driver.target_window()
+        if window is None:
             raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
         from pywinauto import Desktop
-        root = Desktop(backend="uia").window(handle=windows[0].handle)
+        root = Desktop(backend="uia").window(handle=window.handle)
+
+        scene_manager_suffix = ":/plugin/ICListManager/ICListManager.ui.ListManager"
+
+        def find_control_by_id(parent: Any, wanted: str, depth: int) -> Any | None:
+            if depth < 0:
+                return None
+            for child in parent.children()[:max_elements]:
+                actual_id = child.element_info.automation_id
+                if actual_id == wanted or (wanted.startswith(":/") and actual_id.endswith(wanted)):
+                    return child
+                found = find_control_by_id(child, wanted, depth - 1)
+                if found is not None:
+                    return found
+            return None
+
+        scene_root = find_control_by_id(root, scene_manager_suffix, 4)
+        if scene_root is None:
+            raise AccessibilityUnavailable("Scene Manager UIA introuvable")
 
         def find_item(parent: Any, depth: int) -> Any | None:
             if depth < 0:
@@ -197,14 +217,16 @@ class WindowsAccessibilityReader:
                     return found
             return None
 
-        item = find_item(root, max_depth)
+        item = find_item(scene_root, max_depth)
         if item is None:
             raise AccessibilityUnavailable(f"TreeItem introuvable: {name}")
         info = item.element_info
         before_selected = self._is_selected(item)
-        if hasattr(item, "select"):
+        try:
             item.select()
-        else:
+        except Exception:
+            # Some Qt TreeItems expose no SelectionItem pattern. The semantic
+            # control is still valid, so use its UIA-resolved input target.
             item.click_input()
         after_selected = self._is_selected(item)
         return {"control": {"control_type": info.control_type, "name": info.name, "automation_id": info.automation_id, "class_name": info.class_name}, "selected_before": before_selected, "selected_after": after_selected, "read_only": False}
