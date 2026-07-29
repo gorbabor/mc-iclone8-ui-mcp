@@ -87,6 +87,7 @@ Le processus utilise JSON-RPC sur stdin/stdout. Les logs vont sur stderr.
 - `ui.inspect_named_control` : inspecte un contrôle nommé, par exemple `Scene`, et ses enfants directs.
 - `ui.inspect_automation_control` : inspecte un contrôle par `automation_id`, par exemple le conteneur du Scene Manager.
 - `scene.read_manager` : lit un sous-arbre borné du Scene Manager, sans modification.
+- `scene.list_items` : extrait les noms des objets `TreeItem` visibles, sans sélection.
 - `workflow.catalog` : expose l’état progressif des huit familles de workflows.
 - `ui.capture_screen` : capture l'écran ou la fenêtre iClone 8.
 - `scene.read_visible_state` : lit l'état visible connu sans modifier la scène.

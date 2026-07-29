@@ -34,6 +34,7 @@ class MCPServer:
             {"name": "ui.inspect_named_control", "description": "Inspecte un contrôle UIA nommé et ses enfants directs, sans action.", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}, "required": ["name"]}},
             {"name": "ui.inspect_automation_control", "description": "Inspecte un contrôle UIA par automation_id et ses enfants directs, sans action.", "inputSchema": {"type": "object", "properties": {"automation_id": {"type": "string"}, "max_elements": {"type": "integer", "minimum": 1, "maximum": 250, "default": 80}}, "required": ["automation_id"]}},
             {"name": "scene.read_manager", "description": "Lit un sous-arbre borné du Scene Manager en lecture seule.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 500, "default": 200}, "max_depth": {"type": "integer", "minimum": 1, "maximum": 6, "default": 4}}}},
+            {"name": "scene.list_items", "description": "Extrait les TreeItem visibles du Scene Manager en lecture seule.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 500, "default": 200}, "max_depth": {"type": "integer", "minimum": 1, "maximum": 6, "default": 6}}}},
             {"name": "workflow.catalog", "description": "Retourne l'état des huit familles de workflows, sans action UI.", "inputSchema": {"type": "object", "properties": {}}},
             {"name": "ui.capture_screen", "description": "Capture l'écran ou la fenêtre iClone 8 sans modifier la scène.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "window_only": {"type": "boolean", "default": True}}, "required": ["path"]}},
             {"name": "scene.read_visible_state", "description": "Lit l'état visible connu de l'interface iClone 8.", "inputSchema": {"type": "object", "properties": {}}},
@@ -68,6 +69,14 @@ class MCPServer:
                 result = ToolResult("blocked", "inspect_automation_control", str(args.get("automation_id", "")), observed_state_before=before, warnings=[str(exc)], next_step="Vérifier l'automation_id et la disponibilité de UI Automation.")
         elif name == "scene.read_manager":
             result = self.scene_workflow.run(int(args.get("max_elements", 200)), int(args.get("max_depth", 4)))
+        elif name == "scene.list_items":
+            raw = self.scene_workflow.run(int(args.get("max_elements", 200)), int(args.get("max_depth", 6)))
+            if raw["status"] != "ok":
+                result = raw
+            else:
+                elements = raw["observed_state_after"].get("elements", [])
+                items = [{"name": item["name"], "depth": item["depth"], "enabled": item["enabled"], "visible": item["visible"]} for item in elements if item["control_type"] == "TreeItem" and item["name"]]
+                result = ToolResult("ok", "scene.list_items", "Scene Manager TreeItems", observed_state_before=raw["observed_state_before"], observed_state_after={"items": items, "count": len(items)}, verification={"read_only": True, "item_count": len(items), "visual_verification": False}, next_step="Choisir un nom exact pour le prochain test de sélection UI vérifiée.").as_dict()
         elif name == "workflow.catalog":
             catalog = {key: {"category": workflow.category, "status": "planned"} for key, workflow in self.planned.items()}
             result = ToolResult("ok", "workflow.catalog", "eight workflow families", observed_state_before=before, observed_state_after=catalog, verification={"read_only": True}, next_step="Activer chaque workflow après validation sur une scène de test iClone 8.")
