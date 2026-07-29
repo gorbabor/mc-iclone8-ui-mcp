@@ -15,4 +15,6 @@ response = server.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "pa
 payload = json.loads(response["result"]["content"][0]["text"])
 assert payload["status"] == "ok"
 assert payload["verification"]["stop_requested"] is True
+uia = server.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "ui.inspect_accessibility_tree", "arguments": {}}})
+assert json.loads(uia["result"]["content"][0]["text"])["status"] in {"ok", "blocked"}
 print("smoke test: ok")

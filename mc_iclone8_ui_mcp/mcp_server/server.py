@@ -9,6 +9,7 @@ from typing import Any
 
 from ..contracts import ToolResult
 from ..scene_state.reader import VisibleSceneStateReader
+from ..ui_driver.accessibility import AccessibilityUnavailable, WindowsAccessibilityReader
 from ..ui_driver.windows import WindowsUIDriver
 
 log = logging.getLogger("mc-iclone8-ui-mcp")
@@ -18,11 +19,13 @@ class MCPServer:
     def __init__(self, driver: WindowsUIDriver | None = None) -> None:
         self.driver = driver or WindowsUIDriver()
         self.state_reader = VisibleSceneStateReader(self.driver)
+        self.accessibility_reader = WindowsAccessibilityReader(self.driver)
         self.started_at = time.time()
 
     def tools(self) -> list[dict[str, Any]]:
         return [
             {"name": "ui.inspect_application", "description": "Inspecte les fenêtres visibles iClone 8 en lecture seule.", "inputSchema": {"type": "object", "properties": {}}},
+            {"name": "ui.inspect_accessibility_tree", "description": "Lit l'arbre Windows UI Automation sans effectuer d'action.", "inputSchema": {"type": "object", "properties": {"max_elements": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 250}}}},
             {"name": "ui.capture_screen", "description": "Capture l'écran ou la fenêtre iClone 8 sans modifier la scène.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "window_only": {"type": "boolean", "default": True}}, "required": ["path"]}},
             {"name": "scene.read_visible_state", "description": "Lit l'état visible connu de l'interface iClone 8.", "inputSchema": {"type": "object", "properties": {}}},
             {"name": "workflow.stop_all", "description": "Demande l'arrêt propre du workflow UI courant.", "inputSchema": {"type": "object", "properties": {}}},
@@ -34,6 +37,12 @@ class MCPServer:
             after = self.driver.inspect()
             detected = bool(after.get("windows"))
             result = ToolResult("ok" if detected else "blocked", "inspect_application", "iClone 8", observed_state_before=before, observed_state_after=after, verification={"visual_verification": False, "window_detected": detected, "reason": "inspection only"}, warnings=[] if detected else ["Fenêtre iClone 8 non détectée"], next_step="Si une fenêtre iClone 8 est détectée, lancer uniquement un workflow explicitement confirmé.")
+        elif name == "ui.inspect_accessibility_tree":
+            try:
+                tree = self.accessibility_reader.read_tree(int(args.get("max_elements", 250)))
+                result = ToolResult("ok", "inspect_accessibility_tree", "iClone 8 UIA tree", observed_state_before=before, observed_state_after=tree, verification={"read_only": True, "backend": "uia", "element_count": tree["element_count"]}, next_step="Utiliser les noms accessibles et rôles retournés pour préparer des sélecteurs sémantiques.")
+            except AccessibilityUnavailable as exc:
+                result = ToolResult("blocked", "inspect_accessibility_tree", "iClone 8 UIA tree", observed_state_before=before, warnings=[str(exc)], next_step="Installer l'extra windows-ui puis relancer l'inspection.")
         elif name == "scene.read_visible_state":
             after = self.state_reader.read()
             result = ToolResult("ok", "read_visible_state", "visible iClone 8 state", observed_state_before=before, observed_state_after=after, verification={"read_only": True}, next_step="La lecture d'objets détaillée nécessite un backend d'accessibilité UI.")
