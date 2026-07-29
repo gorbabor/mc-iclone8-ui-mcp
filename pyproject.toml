@@ -17,5 +17,8 @@ windows-ui = ["pywinauto>=0.6.8"]
 [project.scripts]
 mc-iclone8-ui-mcp = "mc_iclone8_ui_mcp.__main__:main"
 
+[tool.setuptools.packages.find]
+include = ["mc_iclone8_ui_mcp*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
