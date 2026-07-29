@@ -141,3 +141,36 @@ class WindowsAccessibilityReader:
             "children": children,
             "read_only": True,
         }
+
+    def read_bounded_descendants(self, automation_id: str, max_elements: int = 200, max_depth: int = 4) -> dict[str, Any]:
+        """Read a bounded UIA subtree using children(), avoiding unbounded descendants()."""
+        windows = self.driver.enumerate_windows()
+        if not windows:
+            raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
+        from pywinauto import Desktop
+        root = Desktop(backend="uia").window(handle=windows[0].handle)
+
+        def find_id(parent: Any, wanted: str, depth: int) -> Any | None:
+            if depth < 0:
+                return None
+            for child in parent.children()[:max_elements]:
+                if child.element_info.automation_id == wanted:
+                    return child
+                found = find_id(child, wanted, depth - 1)
+                if found is not None:
+                    return found
+            return None
+
+        control = find_id(root, automation_id, max_depth)
+        if control is None:
+            raise AccessibilityUnavailable(f"Contrôle UIA introuvable: {automation_id}")
+        queue: list[tuple[Any, int]] = [(control, 0)]
+        elements: list[dict[str, Any]] = []
+        while queue and len(elements) < max_elements:
+            current, depth = queue.pop(0)
+            if depth > 0:
+                info = current.element_info
+                elements.append({"depth": depth, "control_type": info.control_type, "name": info.name, "automation_id": info.automation_id, "class_name": info.class_name, "enabled": bool(info.enabled), "visible": bool(info.visible)})
+            if depth < max_depth:
+                queue.extend((child, depth + 1) for child in current.children()[:max_elements - len(elements)])
+        return {"backend": "uia", "root_automation_id": automation_id, "max_depth": max_depth, "element_count": len(elements), "elements": elements, "read_only": True}

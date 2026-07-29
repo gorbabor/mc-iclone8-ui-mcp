@@ -41,7 +41,9 @@ class WindowsUIDriver:
             buf = ctypes.create_unicode_buffer(length + 1)
             user32.GetWindowTextW(hwnd, buf, length + 1)
             title = buf.value
-            if self.title_pattern in title.casefold():
+            normalized = title.casefold()
+            is_iclone_app = normalized.startswith("iclone 8 -") or normalized == "iclone 8"
+            if self.title_pattern in normalized and is_iclone_app:
                 rect = wintypes.RECT()
                 user32.GetWindowRect(hwnd, ctypes.byref(rect))
                 found.append(WindowInfo(int(hwnd), title, True, int(hwnd) == foreground,
@@ -49,6 +51,7 @@ class WindowsUIDriver:
             return True
 
         user32.EnumWindows(callback, 0)
+        found.sort(key=lambda item: (0 if item.title.casefold().startswith("iclone 8 -") else 1, 0 if item.foreground else 1))
         return found
 
     def inspect(self) -> dict:
