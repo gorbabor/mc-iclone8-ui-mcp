@@ -60,6 +60,17 @@ class WindowsUIDriver:
                 "focused_window": next((w for w in windows if w["foreground"]), None),
                 "read_only": True}
 
+    def can_interact(self) -> tuple[bool, str]:
+        windows = self.enumerate_windows()
+        if not windows:
+            return False, "Fenêtre iClone 8 non détectée"
+        window = windows[0]
+        if not window.foreground:
+            return False, "iClone 8 doit être au premier plan"
+        if window.rect and (window.rect[2] <= window.rect[0] or window.rect[3] <= window.rect[1]):
+            return False, "Fenêtre iClone 8 minimisée ou hors écran"
+        return True, "ok"
+
     def capture_screen(self, output: Path, window_only: bool = False) -> str:
         output.parent.mkdir(parents=True, exist_ok=True)
         try:

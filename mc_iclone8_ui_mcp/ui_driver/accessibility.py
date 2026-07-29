@@ -176,3 +176,42 @@ class WindowsAccessibilityReader:
             if depth < max_depth:
                 queue.extend((child, depth + 1) for child in current.children()[:max_elements - len(elements)])
         return {"backend": "uia", "root_automation_id": automation_id, "max_depth": max_depth, "element_count": len(elements), "elements": elements, "read_only": True}
+
+    def select_tree_item(self, name: str, max_elements: int = 250, max_depth: int = 6) -> dict[str, Any]:
+        """Select a visible TreeItem by accessible name; caller must enforce confirmation/focus."""
+        windows = self.driver.enumerate_windows()
+        if not windows:
+            raise AccessibilityUnavailable("Fenêtre iClone 8 non détectée")
+        from pywinauto import Desktop
+        root = Desktop(backend="uia").window(handle=windows[0].handle)
+
+        def find_item(parent: Any, depth: int) -> Any | None:
+            if depth < 0:
+                return None
+            for child in parent.children()[:max_elements]:
+                info = child.element_info
+                if info.control_type == "TreeItem" and info.name == name:
+                    return child
+                found = find_item(child, depth - 1)
+                if found is not None:
+                    return found
+            return None
+
+        item = find_item(root, max_depth)
+        if item is None:
+            raise AccessibilityUnavailable(f"TreeItem introuvable: {name}")
+        info = item.element_info
+        before_selected = self._is_selected(item)
+        if hasattr(item, "select"):
+            item.select()
+        else:
+            item.click_input()
+        after_selected = self._is_selected(item)
+        return {"control": {"control_type": info.control_type, "name": info.name, "automation_id": info.automation_id, "class_name": info.class_name}, "selected_before": before_selected, "selected_after": after_selected, "read_only": False}
+
+    @staticmethod
+    def _is_selected(control: Any) -> bool | None:
+        try:
+            return bool(control.iface_selection_item.CurrentIsSelected)
+        except Exception:
+            return None
