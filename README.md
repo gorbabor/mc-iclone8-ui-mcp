@@ -79,6 +79,8 @@ ui.list_instances
 
 Le mode `observe` ne prend pas le focus. Le mode `interact` autorise les primitives UI après vérification du focus. Le mode `session` indique qu’une instance doit rester la cible pendant la séquence, tout en vérifiant le focus avant chaque action.
 
+Toute action UI doit passer par le garde-fou de focus : instance cible détectée, fenêtre restaurée si nécessaire, premier plan confirmé avant l’action, puis focus revérifié avant la preuve après action.
+
 Note UI Automation : iClone 8 peut exposer des identifiants Qt historiques contenant `iClone6 MainWindow`. Ce sont des métadonnées d'accessibilité de l'interface observée, pas des appels à iClone 6. Le code matche uniquement les suffixes sémantiques et n'utilise ni RLPy ni API d'une autre version.
 
 ### Lancement manuel

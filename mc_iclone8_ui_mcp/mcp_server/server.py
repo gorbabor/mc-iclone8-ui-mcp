@@ -118,6 +118,9 @@ class MCPServer:
                 else:
                     screenshots: list[str] = []
                     try:
+                        focus_before = self.driver.ensure_focus()
+                        if not focus_before.get("focus_acquired"):
+                            raise RuntimeError("Focus iClone 8 non confirmé avant l’action")
                         target_window = self.driver.target_window()
                         if target_window is None:
                             raise RuntimeError("Instance cible disparue avant l’action")
@@ -130,11 +133,14 @@ class MCPServer:
                         state = self.accessibility_reader.select_tree_item(target, max_depth=int(args.get("max_depth", 6)))
                         # Some Qt controls yield focus to the desktop after input.
                         # Restore the same target before collecting after-state evidence.
-                        focus_state = self.driver.activate(target_handle)
+                        focus_state = self.driver.ensure_focus()
+                        if not focus_state.get("focus_acquired"):
+                            raise RuntimeError("Focus iClone 8 non confirmé après l’action")
                         if screenshot_dir:
                             after_path = Path(str(screenshot_dir)) / f"select_{safe_target}_after.png"
                             screenshots.append(self.driver.capture_screen(after_path, window_only=True))
                         verified = state["selected_after"] is True
+                        state["focus_before"] = focus_before
                         state["focus_reacquired"] = focus_state["focus_acquired"]
                         result = ToolResult("ok" if verified else "blocked", "scene.select_item", target, screenshots=screenshots, observed_state_before=before, observed_state_after=state, verification={"visual_verification": bool(screenshots), "selected_after": state["selected_after"], "ui_action": "semantic_tree_item_select", "selection_confirmed": verified, "focus_reacquired": focus_state["focus_acquired"], "visual_review_required": not verified}, warnings=[] if verified else ["Le contrôle Qt n’expose pas l’état SelectionItem; preuve visuelle requise."], next_step="Examiner la capture après et lire le panneau Modify pour confirmer l'objet sélectionné.")
                     except (AccessibilityUnavailable, RuntimeError, ValueError) as exc:

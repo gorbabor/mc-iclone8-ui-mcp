@@ -93,15 +93,18 @@ class WindowsUIDriver:
         refreshed = next((item for item in self.enumerate_windows() if item.handle == window.handle), window)
         return {"target": asdict(refreshed), "focus_acquired": refreshed.foreground, "restored": True}
 
-    def can_interact(self) -> tuple[bool, str]:
+    def ensure_focus(self) -> dict:
+        """Restore and foreground the current target before a UI action."""
         window = self.target_window()
         if window is None:
-            return False, "Fenêtre iClone 8 non détectée"
-        if not window.foreground:
-            return False, "iClone 8 doit être au premier plan"
-        if window.rect and (window.rect[2] <= window.rect[0] or window.rect[3] <= window.rect[1]):
-            return False, "Fenêtre iClone 8 minimisée ou hors écran"
-        return True, "ok"
+            return {"focus_acquired": False, "reason": "Fenêtre iClone 8 non détectée"}
+        if window.foreground and window.rect and window.rect[2] > window.rect[0] and window.rect[3] > window.rect[1]:
+            return {"focus_acquired": True, "restored": False, "target": asdict(window)}
+        return self.activate(window.handle)
+
+    def can_interact(self) -> tuple[bool, str]:
+        state = self.ensure_focus()
+        return bool(state.get("focus_acquired")), str(state.get("reason", "ok" if state.get("focus_acquired") else "Focus iClone 8 non acquis"))
 
     def capture_screen(self, output: Path, window_only: bool = False) -> str:
         output.parent.mkdir(parents=True, exist_ok=True)
